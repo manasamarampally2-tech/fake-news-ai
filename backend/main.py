@@ -1,7 +1,8 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import os
 import joblib
+from fastapi import FastAPI
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -13,8 +14,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model = joblib.load("../model/model.pkl")
-vectorizer = joblib.load("../model/vectorizer.pkl")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+model_path = os.path.join(BASE_DIR, "model", "model.pkl")
+vectorizer_path = os.path.join(BASE_DIR, "model", "vectorizer.pkl")
+
+model = joblib.load(model_path)
+vectorizer = joblib.load(vectorizer_path)
 
 class NewsRequest(BaseModel):
     text: str
@@ -26,13 +32,10 @@ def home():
 @app.post("/predict")
 def predict_news(request: NewsRequest):
 
-    text = request.text
-    vector = vectorizer.transform([text])
+    vector = vectorizer.transform([request.text])
     prediction = model.predict(vector)[0]
 
     if prediction == 1:
-        result = "Fake News"
+        return {"prediction": "Fake News"}
     else:
-        result = "Real News"
-
-    return {"prediction": result}
+        return {"prediction": "Real News"}
